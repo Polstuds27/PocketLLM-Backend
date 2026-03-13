@@ -22,13 +22,15 @@ wss.on("connection", (ws)=>{
     console.log("Client connected");
 
     ws.on("message", async (data) =>{
-        const { message } = JSON.parse(data);
+        const parsed = JSON.parse(data.toString());
+        const { messages, model } = parsed;
 
         try {
             const response = await groq.chat.completions.create({
-                model: "openai/gpt-oss-120b",
+                model: model,
                 messages: [
-                    {role: "user", content: message}
+                    {role: "system", content: "you are a helpful assistant"},
+                    ...messages
                 ]
             });
 
@@ -39,7 +41,10 @@ wss.on("connection", (ws)=>{
                 type: "response",
                 message: reply
             }));
+
+
         } catch (err) {
+             console.error("Groq error:", err.message, err.status);
             ws.send(JSON.stringify({
                 type: "error",
                 message: "LLM request failed"
@@ -47,6 +52,7 @@ wss.on("connection", (ws)=>{
         }
     });
 
+    
     ws.on("close", ()=>{
         console.log("Client Disconnected");
     })
